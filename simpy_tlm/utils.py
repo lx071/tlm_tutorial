@@ -58,7 +58,7 @@ class Generic_Payload:
     # Generic Payload attributes:
     # m_command, m_address, m_data, m_length, m_response_status, m_byte_enable, m_byte_enable_length, m_streaming_width
     def __init__(self) -> None:        
-        self.m_address = 0              # sc_dt::uint64
+        self.m_address = None           # sc_dt::uint64
         self.m_command = None           # tlm_command
         self.m_data = None              # unsigned char*
         self.m_length = 0               # unsigned int
