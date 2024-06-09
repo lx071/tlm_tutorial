@@ -1,12 +1,24 @@
 import simpy
 
-# 三种命令
+# 时间, 对应 SystemC 的 sc_time 类 和 enum sc_time_unit
+def SC_PS(num):
+    return num * 1
+def SC_NS(num):
+    return num * 1e3
+def SC_US(num):
+    return num * 1e6
+def SC_MS(num):
+    return num * 1e9
+def SC_SEC(num):
+    return num * 1e12
+
+# 三种命令, 对应 SystemC 的 enum tlm_command
 class tlm_command:
     TLM_READ_COMMAND = 0
     TLM_WRITE_COMMAND = 1
     TLM_IGNORE_COMMAND = 2
 
-# Response status attribute (六种错误响应)
+# Response status attribute (六种错误响应), 对应 SystemC 的 enum tlm_response_status
 class tlm_response_status:
     TLM_OK_RESPONSE = 1
     TLM_INCOMPLETE_RESPONSE = 0
@@ -16,7 +28,7 @@ class tlm_response_status:
     TLM_BURST_ERROR_RESPONSE = -4
     TLM_BYTE_ENABLE_ERROR_RESPONSE = -5
 
-# 四个阶段
+# 四个阶段, 对应 SystemC 的 tlm_phase 类 和 enum tlm_phase_enum
 class tlm_phase:
     UNINITIALIZED_PHASE = 0
     BEGIN_REQ = 1
@@ -34,11 +46,113 @@ class tlm_phase:
         tlm_phase.m_ex_ph[name] = len(tlm_phase.m_ex_ph.items()) + 5
 
 
-# 三种返回值
+# 三种返回值, 对应 SystemC 的 enum tlm_sync_enum
 class tlm_sync_enum:
     TLM_ACCEPTED = 0
     TLM_UPDATED = 1
     TLM_COMPLETED = 2
+
+
+# 通用负载, 对应 SystemC 的 tlm_generic_payload 类
+class Generic_Payload:
+    # Generic Payload attributes:
+    # m_command, m_address, m_data, m_length, m_response_status, m_byte_enable, m_byte_enable_length, m_streaming_width
+    def __init__(self) -> None:        
+        self.m_address = 0              # sc_dt::uint64
+        self.m_command = None           # tlm_command
+        self.m_data = None              # unsigned char*
+        self.m_length = 0               # unsigned int
+        self.m_response_status = None   # tlm_response_status
+        self.m_dmi = False              # bool
+        self.m_byte_enable = None       # unsigned char*
+        self.m_byte_enable_length = 0   # unsigned int
+        self.m_streaming_width = 0      # unsigned int
+        self.m_gp_option = None         # tlm_gp_option
+
+    '''
+    //----------------
+    // API (including setters & getters)
+    //---------------
+    '''
+    # Command related method
+    def is_read(self): 
+        return self.m_command == tlm_command.TLM_READ_COMMAND
+    def set_read(self):
+        self.m_command = tlm_command.TLM_READ_COMMAND
+    def is_write(self):
+        return self.m_command == tlm_command.TLM_WRITE_COMMAND
+    def set_write(self):
+        self.m_command = tlm_command.TLM_WRITE_COMMAND
+    def get_command(self):
+        return self.m_command;
+    def set_command(self, command):
+        self.m_command = command
+
+    # Address related methods
+    def get_address(self):
+        return self.m_address
+    def set_address(self, address):
+        self.m_address = address
+
+    # Data related methods
+    def get_data_ptr(self):
+        return self.m_data
+    def set_data_ptr(self, data):
+        self.m_data = data
+
+    # Transaction length (in bytes) related methods
+    def get_data_length(self):
+        return self.m_length
+    def set_data_length(self, length):
+        self.m_length = length
+
+    # Response status related methods
+    def is_response_ok(self):
+        return self.m_response_status > 0
+    def is_response_error(self) -> bool:
+        return self.m_response_status <= 0
+    def get_response_status(self):
+        return self.m_response_status
+    def set_response_status(self, response_status, socket):
+        self.m_response_status = response_status
+        # Mandatory initial value
+        if self.m_response_status == tlm_response_status.TLM_INCOMPLETE_RESPONSE:   
+            socket.block_event = simpy.Event(socket.env)
+        # indicate successful completion
+        elif self.m_response_status == tlm_response_status.TLM_OK_RESPONSE:
+            if not socket.block_event.triggered:
+                socket.block_event.succeed()    # 要求传入 initiator 端的 socket
+    def get_response_string(self):
+        pass
+
+    # Streaming related methods
+    def get_streaming_width(self): 
+        return self.m_streaming_width
+    def set_streaming_width(self, streaming_width):
+        self.m_streaming_width = streaming_width
+
+    # Byte enable related methods
+    def get_byte_enable_ptr(self):
+        return self.m_byte_enable
+    def set_byte_enable_ptr(self, byte_enable):
+        self.m_byte_enable = byte_enable
+    def get_byte_enable_length(self):
+        return self.m_byte_enable_length
+    def set_byte_enable_length(self, byte_enable_length):
+        self.m_byte_enable_length = byte_enable_length
+
+    # This is the "DMI-hint" a slave can set this to true if it
+    # wants to indicate that a DMI request would be supported:
+    def set_dmi_allowed(self, dmi_allowed):
+        self.m_dmi = dmi_allowed
+    def is_dmi_allowed(self):
+        return self.m_dmi
+
+    # Use full set of attributes in DMI/debug?
+    def get_gp_option(self):
+        return self.m_gp_option
+    def set_gp_option(self, gp_opt):
+        self.m_gp_option = gp_opt
 
 
 # 对应 SystemC 的 sc_module 类
